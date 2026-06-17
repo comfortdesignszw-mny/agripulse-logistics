@@ -1,0 +1,10 @@
+{
+  "name": "AgriPulse Logistics",
+  "description": "Offline-first PWA for farmers, transporters, and dealers in the SADC region.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
