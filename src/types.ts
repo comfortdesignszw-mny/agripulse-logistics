@@ -3,12 +3,12 @@ export type Role = 'Farmer' | 'Transporter' | 'Dealer';
 export interface User {
   id?: any;
   phoneNumber: string;
-  pin: string; // 6-digit PIN
+  pin: string;
+  email?: string;
   name: string;
   userRole: Role;
   verificationStatus: 'Pending' | 'Verified' | 'Rejected';
   synced: number; // 0 for false, 1 for true
-  email?: string;
   farmAddress?: string;
   location?: string;
   cropSpecializations?: string;

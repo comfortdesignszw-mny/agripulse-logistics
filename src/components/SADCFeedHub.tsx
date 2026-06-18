@@ -864,17 +864,24 @@ export default function SADCFeedHub({ currentUser }: SADCFeedHubProps) {
                       </div>
                       <div className="text-right">
                         <span className="text-[9px] uppercase font-bold text-slate-400 font-mono">Quoted Amount</span>
-                        <p className="font-mono font-black text-slate-800 text-sm">${adv.price}</p>
+                        <p className="font-mono font-black text-slate-800 text-sm">${adv.price} / {adv.unitType || 'Tonne'}</p>
                       </div>
                     </div>
 
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">{adv.description}</p>
                     
-                    {adv.image && (
-                      <div className="mt-3.5 rounded-xl overflow-hidden border border-slate-200 max-h-48">
-                        <img src={adv.image} alt={adv.title} className="w-full h-full object-cover" />
-                      </div>
-                    )}
+                    <div className="grid grid-cols-3 gap-2 mt-3.5">
+                      {(adv.images || []).map((imgUrl: string, idx: number) => (
+                        <div key={idx} className="rounded-xl overflow-hidden border border-slate-200 h-32">
+                           <img src={imgUrl} alt={`${adv.title}-${idx}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                      {!adv.images && adv.image && (
+                         <div className="rounded-xl overflow-hidden border border-slate-200 h-48 col-span-3">
+                           <img src={adv.image} alt={adv.title} className="w-full h-full object-cover" />
+                         </div>
+                      )}
+                    </div>
 
                     <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-450 font-semibold flex-wrap gap-2">
                       <div className="flex items-center gap-1.5">
@@ -887,7 +894,12 @@ export default function SADCFeedHub({ currentUser }: SADCFeedHubProps) {
                           return null;
                         })()}
                       </div>
-                      <span>Date: {new Date(adv.timestamp).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-2">
+                        <span>Date: {new Date(adv.timestamp).toLocaleDateString()}</span>
+                        {currentUser.id !== adv.authorId && (
+                           <button onClick={() => setSelectedReq({ id: adv.id, quantity: '', unit: adv.unitType || 'Tonne', cropName: adv.cropName || adv.title, farmerName: adv.authorName })} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded shadow-sm text-xs ml-2">Bid</button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

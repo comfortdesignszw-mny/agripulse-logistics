@@ -136,18 +136,44 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  const validatePhoneAndPin = (phone: string, pin: string) => {
+    const phoneRegex = /^\+?\d{8,15}$/;
+    if (!phoneRegex.test(phone)) {
+      alert("Invalid phone number format. Please use standard format, e.g. +263771234567");
+      return false;
+    }
+    if (pin.length !== 6 || !/^\d+$/.test(pin)) {
+      alert("PIN must be exactly 6 digits.");
+      return false;
+    }
+    return true;
+  };
+
+  const handlePostRegistration = async (newUser: User, pin: string) => {
+    setSessionPin(pin);
+    const id = await db.users.add(newUser);
+    newUser.id = id;
+
+    await db.sessions.put({
+      id: 'current_session',
+      userId: id,
+      pin: encrypt(pin, 'SADC_DEVICE_LOCK_XOR_KEY_2026'),
+      timestamp: Date.now()
+    });
+
+    setCurrentUser(newUser);
+    const updated = await db.users.toArray();
+    setUsers(updated);
+    setViewState('app');
+  };
+
   const submitFarmerOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onboardingPin.length !== 6 || !/^\d+$/.test(onboardingPin)) {
-      alert("PIN must be exactly 6 digits.");
-      return;
-    }
-    // Set active session pin for profile encryption
-    setSessionPin(onboardingPin);
+    if (!validatePhoneAndPin(farmerPhone, onboardingPin)) return;
     const newUser: User = {
       name: farmerName,
       phoneNumber: farmerPhone,
-      pin: onboardingPin,
+      pin: encrypt(onboardingPin, 'SADC_DEVICE_LOCK_XOR_KEY_2026'),
       email: farmerEmail,
       userRole: 'Farmer',
       farmAddress,
@@ -156,70 +182,32 @@ export default function App() {
       verificationStatus: 'Verified',
       synced: 0
     };
-    const id = await db.users.add(newUser);
-    newUser.id = id;
-
-    // Persist authenticated user session securely inside RxDB
-    await db.sessions.put({
-      id: 'current_session',
-      userId: id,
-      pin: encrypt(onboardingPin, 'SADC_DEVICE_LOCK_XOR_KEY_2026'),
-      timestamp: Date.now()
-    });
-
-    setCurrentUser(newUser);
-    const updated = await db.users.toArray();
-    setUsers(updated);
-    setViewState('app');
+    handlePostRegistration(newUser, onboardingPin);
   };
 
   const submitTransporterOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onboardingPin.length !== 6 || !/^\d+$/.test(onboardingPin)) {
-      alert("PIN must be exactly 6 digits.");
-      return;
-    }
-    // Set active session pin for profile encryption
-    setSessionPin(onboardingPin);
+    if (!validatePhoneAndPin(transporterPhone, onboardingPin)) return;
     const newUser: User = {
       name: transporterName,
       phoneNumber: transporterPhone,
-      pin: onboardingPin,
+      pin: encrypt(onboardingPin, 'SADC_DEVICE_LOCK_XOR_KEY_2026'),
       email: transporterEmail,
       userRole: 'Transporter',
       location: transporterLocation,
-      verificationStatus: 'Pending', // Pending KYC document flows
+      verificationStatus: 'Pending',
       synced: 0
     };
-    const id = await db.users.add(newUser);
-    newUser.id = id;
-
-    // Persist authenticated user session securely inside RxDB
-    await db.sessions.put({
-      id: 'current_session',
-      userId: id,
-      pin: encrypt(onboardingPin, 'SADC_DEVICE_LOCK_XOR_KEY_2026'),
-      timestamp: Date.now()
-    });
-
-    setCurrentUser(newUser);
-    const updated = await db.users.toArray();
-    setUsers(updated);
-    setViewState('app');
+    handlePostRegistration(newUser, onboardingPin);
   };
 
   const submitDealerOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onboardingPin.length !== 6 || !/^\d+$/.test(onboardingPin)) {
-      alert("PIN must be exactly 6 digits.");
-      return;
-    }
-    // Set active session pin for profile encryption
-    setSessionPin(onboardingPin);
+    if (!validatePhoneAndPin(dealerPhone, onboardingPin)) return;
     const newUser: User = {
       name: dealerName,
       phoneNumber: dealerPhone,
-      pin: onboardingPin,
+      pin: encrypt(onboardingPin, 'SADC_DEVICE_LOCK_XOR_KEY_2026'),
       email: dealerEmail,
       userRole: 'Dealer',
       location: dealerLocation,
@@ -227,25 +215,11 @@ export default function App() {
       verificationStatus: 'Verified',
       synced: 0
     };
-    const id = await db.users.add(newUser);
-    newUser.id = id;
-
-    // Persist authenticated user session securely inside RxDB
-    await db.sessions.put({
-      id: 'current_session',
-      userId: id,
-      pin: encrypt(onboardingPin, 'SADC_DEVICE_LOCK_XOR_KEY_2026'),
-      timestamp: Date.now()
-    });
-
-    setCurrentUser(newUser);
-    const updated = await db.users.toArray();
-    setUsers(updated);
-    setViewState('app');
+    handlePostRegistration(newUser, onboardingPin);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans relative pb-20">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans relative pt-14 pb-20">
       <NetworkBanner />
 
       {/* Landing Page Context */}
@@ -469,7 +443,7 @@ export default function App() {
               }`}
             >
               <LogIn size={14} />
-              Sign In (Phone + PIN)
+              Sign In (Phone + Email)
             </button>
           </div>
 
@@ -479,7 +453,7 @@ export default function App() {
               
               {/* Farmer Selection Card */}
               <button 
-                onClick={() => { setOnboardingPin(''); setViewState('onboard_farmer'); }}
+                onClick={() => setViewState('onboard_farmer')}
                 className="w-full text-left bg-white border border-slate-200 hover:border-emerald-500 rounded-2xl p-5 shadow-xs transition-all hover:scale-[1.01] active:scale-[0.99] group flex items-start gap-4"
               >
                 <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-colors">
@@ -493,7 +467,7 @@ export default function App() {
 
               {/* Transporter Selection Card */}
               <button 
-                onClick={() => { setOnboardingPin(''); setViewState('onboard_transporter'); }}
+                onClick={() => setViewState('onboard_transporter')}
                 className="w-full text-left bg-white border border-slate-200 hover:border-indigo-500 rounded-2xl p-5 shadow-xs transition-all hover:scale-[1.01] active:scale-[0.99] group flex items-start gap-4"
               >
                 <div className="bg-indigo-100 text-indigo-600 p-3 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-colors">
@@ -507,7 +481,7 @@ export default function App() {
 
               {/* Dealer Selection Card */}
               <button 
-                onClick={() => { setOnboardingPin(''); setViewState('onboard_dealer'); }}
+                onClick={() => setViewState('onboard_dealer')}
                 className="w-full text-left bg-white border border-slate-200 hover:border-amber-500 rounded-2xl p-5 shadow-xs transition-all hover:scale-[1.01] active:scale-[0.99] group flex items-start gap-4"
               >
                 <div className="bg-amber-100 text-amber-600 p-3 rounded-xl group-hover:bg-amber-50 group-hover:text-white transition-colors">
@@ -520,7 +494,7 @@ export default function App() {
               </button>
             </div>
           ) : (
-            /* Secure PIN and Phone Login Card */
+            /* Secure Phone and PIN Login Card */
             <form onSubmit={async (e) => {
               e.preventDefault();
               setLoginError('');
@@ -528,17 +502,21 @@ export default function App() {
                 setLoginError('SADC Telephone and exact 6-digit PIN are required.');
                 return;
               }
+              const phoneRegex = /^\+?\d{8,15}$/;
+              if (!phoneRegex.test(loginPhone)) {
+                setLoginError("Invalid phone number format. Please use standard format, e.g. +263771234567");
+                return;
+              }
               const foundUser = await db.users.where('phoneNumber').equals(loginPhone).first();
               if (foundUser) {
-                if (foundUser.pin === loginPin) {
-                  // Decrypt and set active profile session
+                const decryptedPin = decrypt(foundUser.pin, 'SADC_DEVICE_LOCK_XOR_KEY_2026');
+                if (decryptedPin === loginPin) {
                   setSessionPin(loginPin);
 
-                  // Persist authenticated user session securely inside RxDB
                   await db.sessions.put({
                     id: 'current_session',
                     userId: foundUser.id!,
-                    pin: encrypt(loginPin, 'SADC_DEVICE_LOCK_XOR_KEY_2026'),
+                    pin: foundUser.pin,
                     timestamp: Date.now()
                   });
 
@@ -553,7 +531,7 @@ export default function App() {
               }
             }} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-850 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <Shield size={16} className="text-emerald-600" /> Secure SADC Pin Access
+                <Shield size={16} className="text-emerald-600" /> Secure Device Access
               </h3>
               
               {loginError && (
@@ -571,7 +549,7 @@ export default function App() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">6-Digit Secure Access PIN</label>
+                <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">6-Digit Local PIN</label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
                   <input required type="password" maxLength={6} placeholder="e.g. 123456" value={loginPin} onChange={e => setLoginPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium outline-none text-slate-800 animate-none" />
@@ -584,7 +562,7 @@ export default function App() {
               </button>
 
               <p className="text-[10px] text-slate-400 leading-normal text-center mt-2">
-                All profile details, transport requests, and bid histories are encrypted locally. Authenticate using your PIN to unlock session access keys instantly.
+                All profile details are stored directly on your device. Authenticate using your PIN to unlock securely.
               </p>
             </form>
           )}
@@ -625,8 +603,11 @@ export default function App() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">6-Digit Secure Profile PIN</label>
-                <input required type="password" maxLength={6} placeholder="e.g. 123456" value={onboardingPin} onChange={e => setOnboardingPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-xl p-2.5 text-xs outline-none" />
+                <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">6-Digit Local PIN</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
+                  <input required type="password" maxLength={6} placeholder="Secure PIN" value={onboardingPin} onChange={e => setOnboardingPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-xl p-2.5 pl-10 text-xs outline-none" />
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -689,8 +670,11 @@ export default function App() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">6-Digit Secure Profile PIN</label>
-                <input required type="password" maxLength={6} placeholder="e.g. 123456" value={onboardingPin} onChange={e => setOnboardingPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl p-2.5 text-xs outline-none" />
+                <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">6-Digit Local PIN</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
+                  <input required type="password" maxLength={6} placeholder="Secure PIN" value={onboardingPin} onChange={e => setOnboardingPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl p-2.5 pl-10 text-xs outline-none" />
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -738,8 +722,11 @@ export default function App() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">6-Digit Secure Profile PIN</label>
-                <input required type="password" maxLength={6} placeholder="e.g. 123456" value={onboardingPin} onChange={e => setOnboardingPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 rounded-xl p-2.5 text-xs outline-none" />
+                <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">6-Digit Local PIN</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
+                  <input required type="password" maxLength={6} placeholder="Secure PIN" value={onboardingPin} onChange={e => setOnboardingPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 rounded-xl p-2.5 pl-10 text-xs outline-none" />
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -765,13 +752,8 @@ export default function App() {
         <main className="flex-grow flex flex-col w-full">
           <div className="flex-grow w-full max-w-7xl mx-auto flex flex-col md:flex-row pb-12">
             {/* LEFT SIDEBAR FOR DESKTOP (Always Prominence, Details visible) */}
-            <div className="hidden md:flex flex-col w-64 bg-white border-r border-slate-205 h-screen sticky top-0 p-5 justify-between flex-shrink-0">
+            <div className="hidden md:flex flex-col w-64 bg-white border-r border-slate-205 h-[calc(100vh-3.5rem)] sticky top-14 p-5 justify-between flex-shrink-0">
               <div className="space-y-6 text-left">
-                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <Globe className="text-emerald-600 animate-spin-slow" size={20} />
-                  <span className="font-extrabold text-sm tracking-tight text-slate-800 font-sans">AgriPulse SADC</span>
-                </div>
-
                 {/* Prominent Current User Profile card */}
                 <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-2.5">
@@ -784,9 +766,12 @@ export default function App() {
                     </div>
                     <div className="min-w-0">
                       <h4 className="font-extrabold text-xs text-slate-800 leading-none truncate">{currentUser.name}</h4>
-                      <span className="inline-block bg-emerald-50 text-emerald-800 font-black text-[8px] px-1.5 py-0.5 rounded uppercase mt-1 tracking-wider">
-                        {currentUser.userRole}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="inline-block bg-emerald-50 text-emerald-800 font-black text-[8px] px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          {currentUser.userRole}
+                        </span>
+                        <span className="text-[8px] font-mono text-emerald-600 font-bold uppercase">ID: {String(currentUser.id).substring(2, 8)}</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -864,17 +849,13 @@ export default function App() {
             <div className="flex-grow flex flex-col min-w-0">
               
               {/* MOBILE STICKY TOP HEADER */}
-              <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-3xs">
-                <div className="flex items-center gap-2">
-                  <Globe className="text-emerald-600 animate-spin-slow" size={20} />
-                  <span className="font-extrabold text-sm tracking-tight text-slate-800">AgriPulse SADC</span>
-                </div>
-                
+              <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-end sticky top-14 z-40 shadow-sm">
                 <button 
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors"
+                  className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-2 font-bold text-xs"
                 >
-                  {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+                  <span className="uppercase tracking-wider">Menu</span>
+                  {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
                 </button>
               </div>
 
@@ -894,9 +875,12 @@ export default function App() {
                     <div className="min-w-0">
                       <h4 className="font-extrabold text-xs text-slate-850 leading-none truncate">{currentUser.name}</h4>
                       <p className="text-[9px] text-slate-450 mt-1 font-medium">{currentUser.phoneNumber} • {currentUser.email}</p>
-                      <span className="inline-block bg-emerald-555 text-emerald-800 border border-emerald-200 font-extrabold text-[8px] px-1.5 py-0.5 rounded uppercase mt-1 tracking-wide">
-                        {currentUser.userRole}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="inline-block bg-emerald-555 text-emerald-800 border border-emerald-200 font-extrabold text-[8px] px-1.5 py-0.5 rounded uppercase tracking-wide">
+                          {currentUser.userRole}
+                        </span>
+                        <span className="text-[8px] font-mono text-emerald-600 font-bold uppercase">ID: {String(currentUser.id).substring(2, 8)}</span>
+                      </div>
                     </div>
                   </div>
 

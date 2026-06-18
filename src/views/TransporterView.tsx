@@ -31,6 +31,7 @@ export default function TransporterView({ user, activeTab }: { user: User; activ
   const activeRequests = useLiveQuery(() => db.transportRequests.where('status').equals('Open').reverse().sortBy('createdAt')) || [];
   const myBids = useLiveQuery(() => db.bids.where('bidderId').equals(user.id!).toArray()) || [];
   const globalAdverts = useLiveQuery(() => db.adverts.toArray()) || [];
+  const allUsers = useLiveQuery(() => db.users.toArray()) || [];
 
   const requiredDocTypes: Array<'NationalID' | 'DriverLicense' | 'VehicleReg' | 'VehiclePhoto'> = [
     'NationalID', 'DriverLicense', 'VehicleReg', 'VehiclePhoto'
@@ -447,18 +448,37 @@ export default function TransporterView({ user, activeTab }: { user: User; activ
             ) : (
               <div className="space-y-3">
                 {myBids.map(bid => {
+                  const targetReq = activeRequests.find(r => r.id === bid.requestId);
+                  const targetAdv = globalAdverts.find(a => a.id === bid.requestId);
+                  const clientUser = allUsers.find(u => u.id === targetReq?.farmerId || u.id === targetAdv?.authorId);
+                  
                   return (
-                    <div key={bid.id} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs flex justify-between items-center text-left">
-                      <div>
-                        <span className="text-[8px] font-extrabold uppercase bg-slate-100 px-2 py-0.5 rounded">
-                          Tender Ref: #{bid.requestId}
+                    <div key={bid.id} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs text-left">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="text-[8px] font-extrabold uppercase bg-slate-100 px-2 py-0.5 rounded">
+                            Tender Ref: #{bid.requestId}
+                          </span>
+                          <p className="font-bold text-slate-800 text-xs sm:text-sm mt-1.5">Submitted Counter rate: <span className="text-indigo-600">${bid.offerPrice}</span></p>
+                          <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Placed Date: {new Date(bid.timestamp).toLocaleDateString()}</p>
+                        </div>
+                        <span className={`text-[9px] font-extrabold px-2.5 py-1 rounded shadow-3xs uppercase ${bid.status === 'Accepted' ? 'bg-emerald-100 text-emerald-800' : bid.status === 'Rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {bid.status}
                         </span>
-                        <p className="font-bold text-slate-800 text-xs sm:text-sm mt-1.5">Submitted Counter rate: <span className="text-indigo-600">${bid.offerPrice}</span></p>
-                        <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Placed Date: {new Date(bid.timestamp).toLocaleDateString()}</p>
                       </div>
-                      <span className={`text-[9px] font-extrabold px-2.5 py-1 rounded shadow-3xs uppercase ${bid.status === 'Accepted' ? 'bg-emerald-100 text-emerald-800' : bid.status === 'Rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
-                        {bid.status}
-                      </span>
+                      
+                      {bid.status === 'Accepted' && (
+                         <div className="mt-3 bg-emerald-50 border border-emerald-100 p-3 rounded-xl">
+                            <div className="mb-2">
+                              <p className="text-xs font-bold text-emerald-800 flex items-center gap-1.5"><Phone size={12} /> Counter-Party Contact Number:</p>
+                              <p className="text-sm font-mono text-emerald-900 font-extrabold">{clientUser?.phoneNumber || 'Not found'}</p>
+                            </div>
+                            <div className="flex gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-amber-800 text-[9px] leading-relaxed font-medium">
+                              <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                              <p>Warning: Verify the client externally before deploying fleet. The app developers are not responsible or liable for any fraudulent activities occurring off-platform.</p>
+                            </div>
+                         </div>
+                      )}
                     </div>
                   );
                 })}

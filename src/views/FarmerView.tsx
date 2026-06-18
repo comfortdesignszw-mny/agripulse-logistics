@@ -22,8 +22,9 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
   // Advert creation states
   const [advTitle, setAdvTitle] = useState('');
   const [advPrice, setAdvPrice] = useState('');
+  const [advUnit, setAdvUnit] = useState('Tonne');
   const [advDesc, setAdvDesc] = useState('');
-  const [advImage, setAdvImage] = useState<string | null>(null);
+  const [advImages, setAdvImages] = useState<string[]>([]);
   const [showAdvertForm, setShowAdvertForm] = useState(false);
 
   // Settings / Profile states
@@ -80,7 +81,9 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
         const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
         if (target === 'request') setMediaPreview(dataUrl);
-        else if (target === 'advert') setAdvImage(dataUrl);
+        else if (target === 'advert') {
+          setAdvImages(prev => prev.length < 3 ? [...prev, dataUrl] : prev);
+        }
         else if (target === 'avatar') setEditAvatar(dataUrl);
       };
       img.src = event.target?.result as string;
@@ -126,15 +129,17 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
       cropName: crop,
       description: advDesc,
       price: Number(advPrice),
-      image: advImage || undefined,
+      unitType: advUnit,
+      images: advImages.length > 0 ? advImages : undefined,
       timestamp: Date.now(),
       type: 'ProduceSale'
     });
 
     setAdvTitle('');
     setAdvPrice('');
+    setAdvUnit('Tonne');
     setAdvDesc('');
-    setAdvImage(null);
+    setAdvImages([]);
     setShowAdvertForm(false);
   };
 
@@ -359,25 +364,43 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
                         ) : (
                           <div className="space-y-2">
                             {reqBids.map(bid => (
-                              <div key={bid.id} className="bg-white rounded-xl border border-slate-150 p-3 flex justify-between items-center shadow-3xs">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">
-                                    {bid.bidderRole === 'Transporter' ? '🚚' : '🏢'}
+                              <div key={bid.id} className="bg-white rounded-xl border border-slate-150 p-3 flex flex-col gap-2 shadow-3xs">
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">
+                                      {bid.bidderRole === 'Transporter' ? '🚚' : '🏢'}
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-xs text-slate-850">{bid.bidderName || `Carrier #${bid.bidderId}`}</p>
+                                      <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400">{bid.bidderRole}</p>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <p className="font-bold text-xs text-slate-850">{bid.bidderName || `Carrier #${bid.bidderId}`}</p>
-                                    <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400">{bid.bidderRole}</p>
+                                  <div className="flex items-center gap-3">
+                                    <p className="font-extrabold text-slate-805 text-sm">${bid.offerPrice}</p>
+                                    {bid.status === 'Pending' ? (
+                                      <button
+                                        onClick={() => handleAcceptBid(bid)}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] px-3.5 py-1.5 rounded-lg shadow-sm tracking-wide"
+                                      >
+                                        ACCEPT BID
+                                      </button>
+                                    ) : (
+                                      <span className={`text-[9px] font-bold uppercase ${bid.status === 'Accepted' ? 'text-emerald-600' : 'text-slate-400'}`}>{bid.status}</span>
+                                    )}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                  <p className="font-extrabold text-slate-805 text-sm">${bid.offerPrice}</p>
-                                  <button
-                                    onClick={() => handleAcceptBid(bid)}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] px-3.5 py-1.5 rounded-lg shadow-sm tracking-wide"
-                                  >
-                                    ACCEPT BID
-                                  </button>
-                                </div>
+                                {bid.status === 'Accepted' && (
+                                   <div className="mt-2 bg-emerald-50 border border-emerald-100 p-3 rounded-xl">
+                                      <div className="mb-2">
+                                        <p className="text-xs font-bold text-emerald-800 flex items-center gap-1.5"><Phone size={12} /> Contact Number to negotiate directly:</p>
+                                        <p className="text-sm font-mono text-emerald-900 font-extrabold">{allUsers.find(u => u.id === bid.bidderId)?.phoneNumber || 'Not found'}</p>
+                                      </div>
+                                      <div className="flex gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-amber-800 text-[9px] leading-relaxed font-medium">
+                                        <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                                        <p>Warning: Verify all counter-parties before committing to deliveries or making any payments. The app developers are not responsible or liable for any fraudulent activities resulting from off-platform negotiations.</p>
+                                      </div>
+                                   </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -471,7 +494,7 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
                   <input required placeholder="e.g. Premium High-quality Grade A Maize" value={advTitle} onChange={e => setAdvTitle(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none focus:border-emerald-500" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Crop category</label>
                     <select value={crop} onChange={e => setCrop(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none">
@@ -483,8 +506,21 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Price per Tonne (USD)</label>
+                    <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Price (USD)</label>
                     <input required type="number" placeholder="USD rate" value={advPrice} onChange={e => setAdvPrice(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Per Unit</label>
+                    <select value={advUnit} onChange={e => setAdvUnit(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none">
+                      <option>Tonne</option>
+                      <option>kg</option>
+                      <option>sack</option>
+                      <option>bucket</option>
+                      <option>cartload</option>
+                      <option>gallon</option>
+                      <option>litres</option>
+                      <option>other</option>
+                    </select>
                   </div>
                 </div>
 
@@ -494,14 +530,30 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Attachment Image</label>
-                  <div className="border border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center relative overflow-hidden h-20 bg-white justify-center">
-                    {advImage ? (
-                      <img src={advImage} alt="Advert Preview" className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-[10px] text-slate-400 font-medium">Capture or pick photo</span>
-                    )}
-                    <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handleMediaCapture(e, 'advert')} />
+                  <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Attachment Images (Max 3)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[0, 1, 2].map((idx) => (
+                      <div key={idx} className="border border-dashed border-slate-300 rounded-lg flex flex-col items-center relative overflow-hidden h-20 bg-white justify-center">
+                        {advImages[idx] ? (
+                          <>
+                            <img src={advImages[idx]} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                            <button type="button" onClick={() => setAdvImages(advImages.filter((_, i) => i !== idx))} className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow z-10">
+                              <X size={12} className="text-red-500" />
+                            </button>
+                          </>
+                        ) : (
+                          advImages.length === idx ? (
+                             <>
+                               <Camera size={16} className="text-slate-300 mb-1" />
+                               <span className="text-[8px] text-slate-400 font-medium">Add Photo</span>
+                               <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handleMediaCapture(e, 'advert')} />
+                             </>
+                          ) : (
+                             <span className="text-[8px] text-slate-300 font-medium">Slot {idx +1}</span>
+                          )
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -525,7 +577,7 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
                           {adv.type === 'ProduceSale' ? 'Farmer Produce Sale' : adv.type === 'TransportOffer' ? 'Carrier Run Pack' : 'Dealer Procurement Target'}
                         </span>
                         <h4 className="font-bold text-slate-800 text-sm mt-1">{adv.title}</h4>
-                        <p className="text-[10px] font-bold text-emerald-650 mt-0.5">Price: ${adv.price}</p>
+                        <p className="text-[10px] font-bold text-emerald-650 mt-0.5">Price: ${adv.price} per {adv.unitType || 'Tonne'}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] font-bold text-slate-700">{adv.authorName}</p>
@@ -535,9 +587,55 @@ export default function FarmerView({ user, activeTab }: { user: User; activeTab:
 
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">{adv.description}</p>
 
-                    {adv.image && (
-                      <div className="mt-3 rounded-xl overflow-hidden border border-slate-150 max-h-56">
-                        <img src={adv.image} alt={adv.title} className="w-full object-cover" />
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {(adv.images || []).map((imgUrl: string, idx: number) => (
+                        <div key={idx} className="rounded-xl overflow-hidden border border-slate-150 h-24">
+                           <img src={imgUrl} alt={`${adv.title}-${idx}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                      {!adv.images && adv.image && (
+                         <div className="rounded-xl overflow-hidden border border-slate-150 h-24 col-span-3">
+                           <img src={adv.image} alt={adv.title} className="w-full h-full object-cover" />
+                         </div>
+                      )}
+                    </div>
+                    
+                    {adv.authorId === user.id && (
+                      <div className="mt-3 bg-slate-50 rounded-xl p-3 border border-slate-150">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Bids on this Advert</span>
+                        {allBids.filter(b => b.requestId === adv.id).length === 0 ? (
+                           <p className="text-[10px] text-slate-450 italic">No bids submitted yet...</p>
+                        ) : (
+                           <div className="space-y-2">
+                             {allBids.filter(b => b.requestId === adv.id).map(bid => (
+                               <div key={bid.id} className="bg-white rounded-lg border border-slate-200 p-2 text-xs flex flex-col gap-2 shadow-3xs">
+                                 <div className="flex justify-between items-center">
+                                   <div>
+                                     <p className="font-bold text-slate-800">{bid.bidderName}</p>
+                                     <p className="text-[9px] text-slate-500 uppercase">{bid.bidderRole} • ${bid.offerPrice}</p>
+                                   </div>
+                                   {bid.status === 'Pending' ? (
+                                      <button onClick={() => handleAcceptBid(bid)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[9px] px-2 py-1 rounded-md uppercase">Accept</button>
+                                   ) : (
+                                      <span className={`text-[9px] font-bold uppercase ${bid.status === 'Accepted' ? 'text-emerald-600' : 'text-slate-400'}`}>{bid.status}</span>
+                                   )}
+                                 </div>
+                                 {bid.status === 'Accepted' && (
+                                    <div className="mt-1 bg-emerald-50 border border-emerald-100 p-2 rounded-lg">
+                                       <div className="mb-2">
+                                         <p className="text-[10px] font-bold text-emerald-800 flex items-center gap-1.5"><Phone size={10} /> Contact Number:</p>
+                                         <p className="text-xs font-mono text-emerald-900 font-extrabold">{allUsers.find(u => u.id === bid.bidderId)?.phoneNumber || 'Not found'}</p>
+                                       </div>
+                                       <div className="flex gap-1.5 p-1.5 bg-amber-50 border border-amber-100 rounded-md text-amber-800 text-[8px] leading-relaxed font-medium">
+                                         <AlertCircle size={10} className="flex-shrink-0 mt-0.5" />
+                                         <p>Warning: Verify all counter-parties internally before payments. We are not liable for external off-platform negotiations.</p>
+                                       </div>
+                                    </div>
+                                 )}
+                               </div>
+                             ))}
+                           </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -33,6 +33,7 @@ export default function DealerView({ user, activeTab }: { user: User; activeTab:
   const activeRequests = useLiveQuery(() => db.transportRequests.where('status').equals('Open').reverse().sortBy('createdAt')) || [];
   const myBids = useLiveQuery(() => db.bids.where('bidderId').equals(user.id!).toArray()) || [];
   const globalAdverts = useLiveQuery(() => db.adverts.toArray()) || [];
+  const allUsers = useLiveQuery(() => db.users.toArray()) || [];
 
   useEffect(() => {
     setEditName(user.name);
@@ -380,20 +381,41 @@ export default function DealerView({ user, activeTab }: { user: User; activeTab:
               </div>
             ) : (
               <div className="space-y-3">
-                {myBids.map(bid => (
-                  <div key={bid.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-3xs flex justify-between items-center">
-                    <div>
-                      <span className="bg-slate-100 px-2 py-0.5 rounded text-[8px] font-mono font-bold">
-                        Job No: #{bid.requestId}
-                      </span>
-                      <h4 className="font-bold text-xs sm:text-sm mt-1.5">Procurement valuation: <span className="text-amber-600">${bid.offerPrice}</span></h4>
-                      <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Offer date: {new Date(bid.timestamp).toLocaleDateString()}</p>
+                {myBids.map(bid => {
+                  const targetReq = activeRequests.find(r => r.id === bid.requestId);
+                  const targetAdv = globalAdverts.find(a => a.id === bid.requestId);
+                  const clientUser = allUsers.find(u => u.id === targetReq?.farmerId || u.id === targetAdv?.authorId);
+                  
+                  return (
+                    <div key={bid.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-3xs flex flex-col gap-2">
+                       <div className="flex justify-between items-center text-left">
+                         <div>
+                           <span className="bg-slate-100 px-2 py-0.5 rounded text-[8px] font-mono font-bold">
+                             Job No: #{bid.requestId}
+                           </span>
+                           <h4 className="font-bold text-xs sm:text-sm mt-1.5">Procurement valuation: <span className="text-amber-600">${bid.offerPrice}</span></h4>
+                           <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Offer date: {new Date(bid.timestamp).toLocaleDateString()}</p>
+                         </div>
+                         <span className={`text-[9px] font-bold px-2.5 py-1 rounded shadow-3xs uppercase ${bid.status === 'Accepted' ? 'bg-emerald-100 text-emerald-800' : bid.status === 'Rejected' ? 'bg-rose-105 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
+                           {bid.status}
+                         </span>
+                       </div>
+
+                       {bid.status === 'Accepted' && (
+                          <div className="mt-2 bg-emerald-50 border border-emerald-100 p-3 rounded-xl">
+                             <div className="mb-2">
+                               <p className="text-xs font-bold text-emerald-800 flex items-center gap-1.5"><Phone size={12} /> Counter-Party Contact Number:</p>
+                               <p className="text-sm font-mono text-emerald-900 font-extrabold">{clientUser?.phoneNumber || 'Not found'}</p>
+                             </div>
+                             <div className="flex gap-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-amber-800 text-[9px] leading-relaxed font-medium">
+                               <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                               <p>Warning: Verify the client externally before transferring funds. The app developers are not responsible or liable for any fraudulent activities occurring off-platform.</p>
+                             </div>
+                          </div>
+                       )}
                     </div>
-                    <span className={`text-[9px] font-bold px-2.5 py-1 rounded shadow-3xs uppercase ${bid.status === 'Accepted' ? 'bg-emerald-100 text-emerald-800' : bid.status === 'Rejected' ? 'bg-rose-105 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
-                      {bid.status}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>

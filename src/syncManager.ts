@@ -122,12 +122,11 @@ class SyncManager {
   }
 
   private addLog(table: string, recordId: any, description: string) {
-    const logId = `${table}-${recordId}`;
     // Check if pending already exists to avoid duplication
-    if (this.logs.some(l => l.id === logId && l.status === 'pending')) return;
+    if (this.logs.some(l => l.table === table && l.recordId === recordId && l.status === 'pending')) return;
 
     this.logs.unshift({
-      id: logId,
+      id: `${table}-${recordId}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       table,
       recordId,
       description,
@@ -142,8 +141,7 @@ class SyncManager {
   }
 
   private updateLogSuccess(table: string, recordId: any) {
-    const logId = `${table}-${recordId}`;
-    const log = this.logs.find(l => l.id === logId);
+    const log = this.logs.find(l => l.table === table && l.recordId === recordId && l.status === 'pending');
     if (log) {
       log.status = 'success';
       log.timestamp = Date.now();

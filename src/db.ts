@@ -93,7 +93,7 @@ const userSchema = {
   properties: {
     id: { type: 'string', maxLength: 100 },
     phoneNumber: { type: 'string' },
-    pin: { type: 'string' }, 
+    pin: { type: 'string' },
     name: { type: 'string' },
     userRole: { type: 'string' },
     verificationStatus: { type: 'string' },
@@ -181,7 +181,9 @@ const advertSchema = {
     cropName: { type: 'string' },
     description: { type: 'string' },
     price: { type: 'number' },
+    unitType: { type: 'string' },
     image: { type: 'string' },
+    images: { type: 'array', items: { type: 'string' } },
     timestamp: { type: 'number' },
     type: { type: 'string' }
   },
@@ -225,7 +227,7 @@ async function getRxdb() {
   if (!rxdbPromise) {
     rxdbPromise = (async () => {
       const rxdbInstance = await createRxDatabase({
-        name: 'gripulselogisticsdb',
+        name: 'agripulselogisticsdb_v4',
         storage: getRxStorageDexie(),
         password: 'mySecureSadcDbLocalEncryptionKey' // Enables local database storage-level encryption
       });
