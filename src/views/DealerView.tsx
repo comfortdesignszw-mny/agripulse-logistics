@@ -4,7 +4,7 @@ import { db, useLiveQuery, dataAccess } from '../db';
 import { 
   Store, Leaf, DollarSign, MapPin, Search, ChevronRight, Gavel, X, Clock,
   Tag, PlusCircle, Scale, Megaphone, Truck, Check, Settings, Mail, Phone,
-  Camera, ShoppingBag
+  Camera, ShoppingBag, AlertCircle
 } from 'lucide-react';
 import { syncManager } from '../syncManager';
 
