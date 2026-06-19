@@ -1,4 +1,4 @@
-export type Role = 'Farmer' | 'Transporter' | 'Dealer';
+export type Role = "Farmer" | "Transporter" | "Dealer";
 
 export interface User {
   id?: any;
@@ -7,7 +7,7 @@ export interface User {
   email?: string;
   name: string;
   userRole: Role;
-  verificationStatus: 'Pending' | 'Verified' | 'Rejected';
+  verificationStatus: "Pending" | "Verified" | "Rejected";
   synced: number; // 0 for false, 1 for true
   farmAddress?: string;
   location?: string;
@@ -21,7 +21,7 @@ export interface User {
 export interface KYCDocument {
   id?: any;
   userId: any;
-  docType: 'NationalID' | 'DriverLicense' | 'VehicleReg' | 'VehiclePhoto';
+  docType: "NationalID" | "DriverLicense" | "VehicleReg" | "VehiclePhoto";
   fileDataUrl: string; // Base64 document payload
   synced: number;
 }
@@ -32,11 +32,11 @@ export interface TransportRequest {
   farmerName?: string;
   cropName: string;
   quantity: number;
-  unit: 'kg' | 'Tonnes';
+  unit: "kg" | "Tonnes";
   origin: string;
   destination: string;
   targetPrice: number;
-  status: 'Open' | 'InProgress' | 'Completed';
+  status: "Open" | "InProgress" | "Completed";
   synced: number;
   createdAt: number;
   image?: string; // Optional image data representing crop yields
@@ -47,9 +47,9 @@ export interface Bid {
   requestId: any;
   bidderId: any;
   bidderName?: string;
-  bidderRole: 'Transporter' | 'Dealer';
+  bidderRole: "Transporter" | "Dealer";
   offerPrice: number;
-  status: 'Pending' | 'Accepted' | 'Rejected';
+  status: "Pending" | "Accepted" | "Rejected";
   timestamp: number;
   expiryTimestamp?: number; // Time-locked expiration
   synced: number;
@@ -66,7 +66,7 @@ export interface Advert {
   price?: number;
   image?: string; // Base64 crop or service illustration
   timestamp: number;
-  type: 'ProduceSale' | 'TransportOffer' | 'DealerBuyRequest';
+  type: "ProduceSale" | "TransportOffer" | "DealerBuyRequest";
 }
 
 export interface LocalMediaCache {
