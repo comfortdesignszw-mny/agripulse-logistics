@@ -87,6 +87,11 @@ export default function DealerView({
     req.cropName.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const handleAcceptBid = async (bid: Bid) => {
+    await dataAccess.bids.update(bid.id!, { status: "Accepted" });
+    syncManager.triggerSync();
+  };
+
   const handlePlaceBid = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bidModalReq) return;
@@ -337,7 +342,11 @@ export default function DealerView({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {productsWeAreSelling.map((p) => (
+                    {productsWeAreSelling.map((p) => {
+                      const advBids = globalBids.filter(
+                        (b) => b.requestId === p.id && b.status === "Pending",
+                      );
+                      return (
                       <div
                         key={p.id}
                         className="bg-slate-50 border border-slate-150 p-2.5 rounded-xl"
@@ -352,11 +361,48 @@ export default function DealerView({
                         <h4 className="font-extrabold text-slate-800 text-xs">
                           {p.title}
                         </h4>
-                        <p className="text-[9px] font-bold text-amber-700 mt-0.5">
+                        <p className="text-[9px] font-bold text-amber-700 mt-0.5 mb-2">
                           ${p.price} per Tonne
                         </p>
+                        
+                        {/* Display Bids Made on This Specific Advert */}
+                        <div className="pt-2 border-t border-slate-200">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
+                            Offers ({advBids.length})
+                          </span>
+                          {advBids.length === 0 ? (
+                            <p className="text-[9px] text-slate-450 italic">
+                              No offers yet.
+                            </p>
+                          ) : (
+                            <div className="space-y-1">
+                              {advBids.map((bid) => (
+                                <div
+                                  key={bid.id}
+                                  className="bg-white rounded border border-slate-200 p-1.5 flex justify-between items-center shadow-3xs"
+                                >
+                                  <div>
+                                    <p className="font-bold text-[10px] text-slate-800">
+                                      {bid.bidderName || `User #${bid.bidderId}`}
+                                    </p>
+                                    <p className="font-extrabold text-slate-800 text-[10px]">
+                                      ${bid.offerPrice}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => handleAcceptBid(bid)}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[8px] px-2 py-1 rounded shadow-sm"
+                                  >
+                                    ACCEPT
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>
@@ -378,7 +424,11 @@ export default function DealerView({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {productsWeAreProcuring.map((p) => (
+                    {productsWeAreProcuring.map((p) => {
+                      const advBids = globalBids.filter(
+                        (b) => b.requestId === p.id && b.status === "Pending",
+                      );
+                      return (
                       <div
                         key={p.id}
                         className="bg-amber-50/40 border border-amber-100/70 p-2.5 rounded-xl"
@@ -396,11 +446,48 @@ export default function DealerView({
                         <p className="text-[9px] text-slate-500 mt-0.5">
                           {p.description.substring(0, 48)}...
                         </p>
-                        <p className="text-[9px] font-extrabold text-slate-800 mt-1">
+                        <p className="text-[9px] font-extrabold text-slate-800 mt-1 mb-2">
                           Buying Target: ${p.price}
                         </p>
+
+                        {/* Display Bids Made on This Specific Advert */}
+                        <div className="pt-2 border-t border-amber-200">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
+                            Offers ({advBids.length})
+                          </span>
+                          {advBids.length === 0 ? (
+                            <p className="text-[9px] text-slate-450 italic">
+                              No offers yet.
+                            </p>
+                          ) : (
+                            <div className="space-y-1">
+                              {advBids.map((bid) => (
+                                <div
+                                  key={bid.id}
+                                  className="bg-white rounded border border-amber-200 p-1.5 flex justify-between items-center shadow-3xs"
+                                >
+                                  <div>
+                                    <p className="font-bold text-[10px] text-slate-800">
+                                      {bid.bidderName || `User #${bid.bidderId}`}
+                                    </p>
+                                    <p className="font-extrabold text-slate-800 text-[10px]">
+                                      ${bid.offerPrice}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => handleAcceptBid(bid)}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[8px] px-2 py-1 rounded shadow-sm"
+                                  >
+                                    ACCEPT
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>

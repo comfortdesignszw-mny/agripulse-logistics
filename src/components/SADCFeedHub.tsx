@@ -637,10 +637,10 @@ export default function SADCFeedHub({ currentUser }: SADCFeedHubProps) {
                         )}
                       </div>
 
-                      {/* Interactive Bidding Portal option right in Combined Feed for Open Requests */}
-                      {item.type === "request" &&
-                        item.details?.status === "Open" &&
-                        currentUser.userRole !== "Farmer" && (
+                      {/* Interactive Bidding Portal option right in Combined Feed for Open Requests and Adverts */}
+                      {(item.type === "request" || item.type === "advert") &&
+                        (item.type === "advert" || (item.type === "request" && item.details?.status === "Open")) &&
+                        ((item.type === "request" && currentUser.userRole !== "Farmer") || (item.type === "advert" && currentUser.id !== item.details?.authorId)) && (
                           <div className="pt-2">
                             {successBids[item.details.id] ? (
                               <div className="bg-emerald-50 border border-emerald-200 text-emerald-850 text-[10px] font-bold p-2 rounded-xl flex items-center gap-2">
@@ -655,7 +655,7 @@ export default function SADCFeedHub({ currentUser }: SADCFeedHubProps) {
                                   </span>
                                   <input
                                     type="number"
-                                    placeholder={item.details.targetPrice.toString()}
+                                    placeholder={(item.price || 0).toString()}
                                     value={
                                       quickBidPrices[item.details.id] || ""
                                     }
@@ -673,7 +673,7 @@ export default function SADCFeedHub({ currentUser }: SADCFeedHubProps) {
                                     onClick={() =>
                                       handleQuickBidSubmit(
                                         item.details.id,
-                                        item.details.targetPrice,
+                                        item.price || 0,
                                         false,
                                       )
                                     }
@@ -685,13 +685,13 @@ export default function SADCFeedHub({ currentUser }: SADCFeedHubProps) {
                                     onClick={() =>
                                       handleQuickBidSubmit(
                                         item.details.id,
-                                        item.details.targetPrice,
+                                        item.price || 0,
                                         true,
                                       )
                                     }
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[9px] px-2 py-1 rounded transition-colors"
                                   >
-                                    Match (${item.details.targetPrice})
+                                    Match (${item.price || 0})
                                   </button>
                                 </div>
                               </div>

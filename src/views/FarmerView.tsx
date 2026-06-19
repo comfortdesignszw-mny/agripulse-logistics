@@ -603,6 +603,93 @@ export default function FarmerView({
               </div>
             )}
           </section>
+
+          {/* List of Your Adverts & Bids on them */}
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+              Your Active Classified Ads
+            </h2>
+            {globalAdverts.filter((a) => a.authorId === user.id).length === 0 ? (
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
+                You have not posted any classified ads yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {globalAdverts
+                  .filter((a) => a.authorId === user.id)
+                  .map((adv) => {
+                    const advBids = allBids.filter(
+                      (b) => b.requestId === adv.id && b.status === "Pending",
+                    );
+                    return (
+                      <div
+                        key={adv.id}
+                        className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+                      >
+                        <div className="p-4 flex justify-between items-center border-b border-slate-100">
+                          <div className="flex gap-3">
+                            <h3 className="font-bold text-slate-800 text-sm">
+                              {adv.title}
+                            </h3>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-extrabold text-slate-700 text-xs mt-1">
+                              Price:{" "}
+                              <span className="text-emerald-600 font-extrabold">
+                                ${adv.price}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Display Bids Made on This Specific Advert */}
+                        <div className="p-4 bg-slate-50 space-y-2">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1 block">
+                            Offers/Bids ({advBids.length})
+                          </span>
+                          {advBids.length === 0 ? (
+                            <p className="text-[10px] text-slate-450 italic pl-1">
+                              No offers submitted yet...
+                            </p>
+                          ) : (
+                            <div className="space-y-2">
+                              {advBids.map((bid) => (
+                                <div
+                                  key={bid.id}
+                                  className="bg-white rounded-xl border border-slate-150 p-3 flex flex-col gap-2 shadow-3xs"
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                      <div>
+                                        <p className="font-bold text-xs text-slate-850">
+                                          {bid.bidderName ||
+                                            `User #${bid.bidderId}`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <p className="font-extrabold text-slate-805 text-sm">
+                                        ${bid.offerPrice}
+                                      </p>
+                                      <button
+                                        onClick={() => handleAcceptBid(bid)}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] px-3.5 py-1.5 rounded-lg shadow-sm tracking-wide"
+                                      >
+                                        ACCEPT BID
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </section>
         </div>
       )}
 
