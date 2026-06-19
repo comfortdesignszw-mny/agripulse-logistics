@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import NetworkBanner from './components/NetworkBanner';
 import FarmerView from './views/FarmerView';
-import TransporterView from './views/TransporterView';
+import TransporterView from './components/TransporterView';
 import DealerView from './views/DealerView';
 import SADCFeedHub from './components/SADCFeedHub';
 import SADCMembers from './components/SADCMembers';
