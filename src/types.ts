@@ -1,79 +1,36 @@
-export type Role = "Farmer" | "Transporter" | "Dealer";
-
 export interface User {
-  id?: any;
-  phoneNumber: string;
-  pin: string;
-  email?: string;
+  id: string;
   name: string;
-  userRole: Role;
-  verificationStatus: "Pending" | "Verified" | "Rejected";
-  synced: number; // 0 for false, 1 for true
-  farmAddress?: string;
+  role: "Farmer" | "Transporter" | "Dealer";
   location?: string;
   cropSpecializations?: string;
   cropLookingFor?: string;
-  profileImage?: string;
-  ratingValue?: number;
-  ratingCount?: number;
-}
-
-export interface KYCDocument {
-  id?: any;
-  userId: any;
-  docType: "NationalID" | "DriverLicense" | "VehicleReg" | "VehiclePhoto";
-  fileDataUrl: string; // Base64 document payload
-  synced: number;
-}
-
-export interface TransportRequest {
-  id?: any;
-  farmerId: any;
-  farmerName?: string;
-  cropName: string;
-  quantity: number;
-  unit: "kg" | "Tonnes";
-  origin: string;
-  destination: string;
-  targetPrice: number;
-  status: "Open" | "InProgress" | "Completed";
-  synced: number;
-  createdAt: number;
-  image?: string; // Optional image data representing crop yields
-}
-
-export interface Bid {
-  id?: any;
-  requestId: any;
-  bidderId: any;
-  bidderName?: string;
-  bidderRole: "Transporter" | "Dealer";
-  offerPrice: number;
-  status: "Pending" | "Accepted" | "Rejected";
-  timestamp: number;
-  expiryTimestamp?: number; // Time-locked expiration
-  synced: number;
+  farmAddress?: string;
 }
 
 export interface Advert {
-  id?: any;
-  authorId: any;
+  id: string;
+  authorId: string;
   authorName: string;
-  authorRole: Role;
+  authorRole: string;
   title: string;
   cropName?: string;
   description: string;
   price?: number;
-  image?: string; // Base64 crop or service illustration
+  unitType?: string;
+  image?: string;
+  images?: string[];
   timestamp: number;
-  type: "ProduceSale" | "TransportOffer" | "DealerBuyRequest";
+  type: string;
+  status: string;
 }
 
-export interface LocalMediaCache {
-  id?: any;
-  referenceId: any;
-  tableContext: string;
-  blobType: string;
-  dataUrl: string;
-  synced: number;
+export interface Bid {
+  id: string;
+  advertId: string;
+  bidderId: string;
+  bidderName: string;
+  amount: number;
+  status: "Pending" | "Accepted" | "Rejected";
+  timestamp: number;
 }
