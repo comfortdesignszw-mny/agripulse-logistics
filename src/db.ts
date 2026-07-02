@@ -1,88 +1,157 @@
-import { createRxDatabase, addRxPlugin } from 'rxdb';
-import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
+import Dexie, { Table } from 'dexie';
 
-// Remove the DB6 error by updating the version
-// The user had a problem because we added "status" to the advert schema without bumping version
-const advertSchema = {
-  title: "advert schema",
-  version: 1, // BUMPED TO 1 TO FIX RxDB SCHEMA ERROR
-  primaryKey: "id",
-  type: "object",
-  properties: {
-    id: {
-      type: "string",
-      maxLength: 100
-    },
-    authorId: {
-      type: "string"
-    },
-    authorName: {
-      type: "string"
-    },
-    authorRole: {
-      type: "string"
-    },
-    title: {
-      type: "string"
-    },
-    cropName: {
-      type: "string"
-    },
-    description: {
-      type: "string"
-    },
-    price: {
-      type: "number"
-    },
-    unitType: {
-      type: "string"
-    },
-    image: {
-      type: "string"
-    },
-    images: {
-      type: "array",
-      items: {
-        type: "string"
-      }
-    },
-    timestamp: {
-      type: "number"
-    },
-    type: {
-      type: "string"
-    },
-    status: {
-      type: "string"
-    }
-  },
-  required: [
-    "id",
-    "authorId",
-    "authorName",
-    "authorRole",
-    "title",
-    "description",
-    "timestamp",
-    "type",
-    "status" // Added status as required
-  ]
-};
+// We are replacing RxDB with a Dexie-based implementation, 
+// to act as the local offline Realm MongoDB sync fallback for the web.
+
+export interface User {
+  id: string;
+  role: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  avatar?: string;
+  cropSpecializations?: string;
+  cropLookingFor?: string;
+  farmAddress?: string;
+  agreedContacts?: string[];
+}
+
+export interface Advert {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  title: string;
+  cropName?: string;
+  description: string;
+  price?: number;
+  unitType?: string;
+  image?: string;
+  images?: string[];
+  timestamp: number;
+  type: string;
+  status: string;
+}
+
+export interface Bid {
+  id: string;
+  advertId: string;
+  advertTitle?: string;
+  bidderId: string;
+  bidderName: string;
+  bidderRole: string;
+  amount: number;
+  status: string;
+  timestamp: number;
+}
+
+export interface NotificationDoc {
+  id: string;
+  userId: string;
+  title: string;
+  message?: string;
+  type: string;
+  status: string;
+  timestamp: number;
+  relatedId?: string;
+}
+
+class RealmDBFallback extends Dexie {
+  users!: Table<User, string>;
+  adverts!: Table<Advert, string>;
+  bids!: Table<Bid, string>;
+  notifications!: Table<NotificationDoc, string>;
+
+  constructor() {
+    super('realm_mongodb_fallback_db');
+    this.version(1).stores({
+      users: 'id, role, name',
+      adverts: 'id, authorId, type, status, timestamp',
+      bids: 'id, advertId, bidderId, status, timestamp',
+      notifications: 'id, userId, type, status, timestamp'
+    });
+  }
+}
 
 let dbPromise: any = null;
 
-export const initDB = async () => {
-    if(!dbPromise) {
-        dbPromise = createRxDatabase({
-            name: 'agripulselogisticsdb_v5', // renamed db
-            storage: getRxStorageDexie()
-        }).then(db => {
-            return db.addCollections({
-                adverts: {
-                    schema: advertSchema
-                }
-            }).then(() => db);
-        });
-    }
-    return dbPromise;
-}
+export const initDB = async (): Promise<any> => {
+  if (!dbPromise) {
+    dbPromise = new RealmDBFallback();
+    // Wrap standard dexie methods to look like the ones App.tsx uses (like rxdb upsert)
+    // Dexie's `put` acts like `upsert`.
+    
+    // Force DB to open so tables are instantiated before we patch them
+    await dbPromise.open();
+    
+    // Custom reactivity system for our RxDB wrapper
+    const changeListeners: Set<() => void> = new Set();
+    const notifyListeners = () => {
+      changeListeners.forEach(fn => fn());
+    };
+
+    const patchTable = (table: any) => {
+       table.upsert = async (doc: any) => {
+         const res = await table.put(doc);
+         notifyListeners();
+         return res;
+       };
+       table.insert = async (doc: any) => {
+         const res = await table.add(doc);
+         notifyListeners();
+         return res;
+       };
+       table.findOne = (id: string) => {
+         return {
+           exec: async () => {
+             const result = await table.get(id);
+             if (result) {
+               result.toJSON = () => result;
+               result.patch = async (patchObj: any) => {
+                 const updated = { ...result, ...patchObj };
+                 delete updated.toJSON;
+                 delete updated.patch;
+                 await table.put(updated);
+                 notifyListeners();
+                 return updated;
+               };
+             }
+             return result;
+           }
+         }
+       };
+       const origFind = table.find;
+       table.find = () => {
+         // Create a fake $.subscribe
+         return {
+           $: {
+             subscribe: (callback: (data: any[]) => void) => {
+               // Initial load
+               table.toArray().then((results: any[]) => {
+                 callback(results.map((r: any) => ({ ...r, toJSON: () => r })));
+               });
+               
+               // Hook into Dexie mutations to notify subscribers
+               // This is a naive reactivity simulation for standard App.tsx behavior
+               const listener = () => {
+                 table.toArray().then((results: any[]) => {
+                   callback(results.map((r: any) => ({ ...r, toJSON: () => r })));
+                 });
+               };
+               changeListeners.add(listener);
+               
+               return { unsubscribe: () => changeListeners.delete(listener) };
+             }
+           }
+         };
+       };
+    };
+
+    patchTable(dbPromise.users);
+    patchTable(dbPromise.adverts);
+    patchTable(dbPromise.bids);
+    patchTable(dbPromise.notifications);
+  }
+  return dbPromise;
+};

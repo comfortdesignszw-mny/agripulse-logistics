@@ -4,11 +4,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
-    react({ fastRefresh: false }),
+    react(),
     VitePWA({ registerType: 'autoUpdate' })
   ],
   server: {
     port: 3000,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    hmr: false
   }
 });
